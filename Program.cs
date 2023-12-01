@@ -20,13 +20,13 @@ namespace codecountercli
 
                 string[] fileExtensions = filetypes.Replace(" ", "").Split(",");
 
-                Console.WriteLine($"Started search at {folder}");
+                Console.WriteLine($"Started search at {folder} ");
 
                 List<string> files = DirSearch(folder, fileExtensions);
 
-                Console.WriteLine($"Found {files.Count} files.");
+                Console.WriteLine($"Found {files.Count} files matching query:\n {filetypes}");
                 foreach (var file in files)
-                        Console.WriteLine(file);
+                        Console.WriteLine($"File: {file} - {CountLines(file)} lines");
 
 
             }, filetypesOption, folderOption);
@@ -55,6 +55,34 @@ namespace codecountercli
             }
 
             return files;
+        }
+
+        static int CountLines(string file)
+        {
+            int count = 0;
+            try
+            {
+                using (StreamReader r = new StreamReader(file))
+                {
+                    while (r.ReadLine() is { } line)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("//") && !line.StartsWith("/*") &&
+                            !line.StartsWith("*") &&
+                            !line.StartsWith("#") && !line.StartsWith("<!--") && !line.EndsWith("-->"))
+                        {
+                            count++;
+                        }
+                            
+                        
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error when counting lines in file {file}:\n{e}");
+            }
+
+            return count;
         }
     }
 }
