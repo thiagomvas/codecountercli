@@ -61,6 +61,7 @@ namespace codecountercli
                 Console.WriteLine($"Found {files.Count} files matching query:\n {filetypes}");
                 if (files.Count == 0) return;
 
+                Console.WriteLine("\n\n Files found:");
                 ConsoleTable table = new("File Name", "Line Count", "File Type");
 
                 foreach (var file in files)
@@ -76,17 +77,21 @@ namespace codecountercli
 
                     table.AddRow(fileName, lineCount, FileNames.TryGetValue(fileType, out var name) ? name : fileType);
                 }
-
+                table.Options.EnableCount = false;
                 table.Write();
 
-                ConsoleTable summaryTable = new("File Type", "Line Count");
+                ConsoleTable summaryTable = new("File Type", "Line Count", "Percentage");
+
+                int total = lineCountPerType.Values.Sum();
+                Console.WriteLine($"Total: {total}");
 
                 foreach (var (key, value) in lineCountPerType)
                 {
-                    summaryTable.AddRow(FileNames.TryGetValue(key, out var name) ? name : key, value);
+                    summaryTable.AddRow(FileNames.TryGetValue(key, out var name) ? name : key, value, Percentage(value, total));
                 }   
 
                 Console.WriteLine("\n Summary: ");
+                summaryTable.Options.EnableCount = false;
                 summaryTable.Write();
 
             }, filetypesOption, folderOption);
@@ -115,6 +120,13 @@ namespace codecountercli
             }
 
             return files;
+        }
+
+
+
+        static float Percentage(int value, int total)
+        {
+            return MathF.Round((float)value / total * 100 * 100) / 100;
         }
 
         static int CountLines(string file)
