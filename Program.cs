@@ -37,11 +37,11 @@ namespace codecountercli
         private static async Task Main(string[] args)
         {
             var rootCommand = new RootCommand("A CLI that counts all the lines of code, excluding comments, in a folder");
-
+            CodeCounter counter = new();
             // Options
             Option<string> filetypesOption = new(name: "--ignorefiles",
                 description: "A list of file extensions to ignored, separated by a comma (,)",
-                getDefaultValue: () => ".cs, .java, .cpp, .py, .js, .html, .css, .php, .swift, .rb, .go, .c, .h, .ts, .jsx, .tsx, .vue, .json, .xml, .sql, .pl, .sh, .yaml, .md");
+                getDefaultValue: () => counter.Query);
             Option<string> folderOption = new(name: "--folder", description: "The target folder", getDefaultValue: Directory.GetCurrentDirectory);
 
             rootCommand.Add(filetypesOption);
@@ -144,8 +144,6 @@ namespace codecountercli
                         {
                             count++;
                         }
-                            
-                        
                     }
                 }
             }
