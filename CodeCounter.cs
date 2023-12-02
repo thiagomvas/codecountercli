@@ -47,8 +47,6 @@ namespace codecountercli
         private readonly Dictionary<string, int> lineCountPerType = new();
         private readonly Dictionary<string, int> lineCountPerFile = new();
 
-        private string dir;
-
         public string[] QueryToArray() => Query.Replace(" ", "").Split(",");
 
         public ConsoleTable SummaryTable(string[] files)
@@ -67,13 +65,10 @@ namespace codecountercli
             return table;
         }
 
-        public ConsoleTable LinesPerFileTable(string[] files, string rootDirectory)
+        public void RunCounter(string[] files)
         {
-            ConsoleTable table = new("File Name", "Lines of Code", "File Type");
-
             var query = QueryToArray();
 
-            table.Options.EnableCount = false;
 
             foreach (string file in files)
             {
@@ -92,11 +87,23 @@ namespace codecountercli
                     lineCountPerFile.Add(file, lineCount);
 
             }
+        }
 
+        public ConsoleTable LinesPerFileTable(string rootDirectory, bool shortFileNames)
+        {
+            ConsoleTable table = new("File Name", "Lines of Code", "File Type");
+            table.Options.EnableCount = false;
+
+            table.Options.EnableCount = false;
             foreach ((string key, int value) in lineCountPerFile.OrderByDescending(x => x.Value))
             {   
                 string fileType = Path.GetFileName(key).Split(".").Last();
-                table.AddRow(Path.GetRelativePath(rootDirectory, key), value, FileNames.TryGetValue(fileType, out var name) ? name : fileType);
+                string fileName = "";
+                if(shortFileNames)
+                    fileName = Path.GetFileName(key);
+                else
+                    fileName = Path.GetRelativePath(rootDirectory, key);
+                table.AddRow(fileName, value, FileNames.TryGetValue(fileType, out var name) ? name : fileType);
             }
             return table;
         }

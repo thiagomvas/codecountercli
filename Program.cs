@@ -18,20 +18,37 @@ namespace codecountercli
             Option<string> folderOption = new(name: "--folder", description: "The target folder",
                 getDefaultValue: Directory.GetCurrentDirectory);
 
+            Option<bool> showSummaryOption = new(name: "--showsummary", description: "Show a summary of the results",
+                               getDefaultValue: () => true);
+
+            Option<bool> showFileOption = new(name: "--showfileinfo", description: "Show the results for each file",
+                               getDefaultValue: () => true);
+
+            Option<bool> shortFileNamesOption = new(name: "--shortfilenames", description: "Shows only the file name instead of the path to it on the file info table.",
+                                              getDefaultValue: () => false);
+
+
             rootCommand.Add(filetypesOption);
             rootCommand.Add(folderOption);
+            rootCommand.Add(showSummaryOption);
+            rootCommand.Add(showFileOption);
+            rootCommand.Add(shortFileNamesOption);
 
 
             // Root Command Handler
-            rootCommand.SetHandler((fileTypes, folder) =>
+            rootCommand.SetHandler((fileTypes, folder, showperfile, showsummary, shortfilenames) =>
             {
                 counter.Query = fileTypes;
 
-                string[] files = counter.GetFiles(folder);
-                counter.LinesPerFileTable(files, folder).Write();
-                counter.SummaryTable(files).Write();
 
-            }, filetypesOption, folderOption);
+                string[] files = counter.GetFiles(folder);
+                counter.RunCounter(files);
+
+
+                if(showperfile) counter.LinesPerFileTable(folder, shortfilenames).Write();
+                if(showsummary) counter.SummaryTable(files).Write();
+
+            }, filetypesOption, folderOption, showFileOption, showSummaryOption, shortFileNamesOption);
 
             await rootCommand.InvokeAsync(args);
         }
