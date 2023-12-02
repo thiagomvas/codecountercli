@@ -46,6 +46,8 @@ namespace codecountercli
         {
             ConsoleTable table = new("Language / File Type", "Lines of code", "Percentage of total");
 
+            table.Options.EnableCount = false;
+
             int total = lineCountPerType.Values.Sum();
 
             foreach (var (key, value) in lineCountPerType)
@@ -58,7 +60,10 @@ namespace codecountercli
 
         public ConsoleTable LinesPerFileTable(string[] files)
         {
-            ConsoleTable table = new("File Name, Lines of Code, File Type");
+            ConsoleTable table = new("File Name", "Lines of Code", "File Type");
+
+            table.Options.EnableCount = false;
+
             foreach (string file in files)
             {
                 string fileName = Path.GetFileName(file);
