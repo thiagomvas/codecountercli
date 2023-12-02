@@ -5,35 +5,6 @@ namespace codecountercli
 {
     internal class Program
     {
-
-        static readonly Dictionary<string, string> FileNames = new()
-        {
-            { "cs", "C#" },
-            { "java", "Java" },
-            { "cpp", "C++" },
-            { "py", "Python" },
-            { "js", "JavaScript" },
-            { "html", "HTML" },
-            { "css", "CSS" },
-            { "php", "PHP" },
-            { "swift", "Swift" },
-            { "rb", "Ruby" },
-            { "go", "Go" },
-            { "c", "C" },
-            { "h", "Header" },
-            { "ts", "TypeScript" },
-            { "jsx", "React JSX" },
-            { "tsx", "React TypeScript" },
-            { "vue", "Vue.js" },
-            { "json", "JSON" },
-            { "xml", "XML" },
-            { "sql", "SQL" },
-            { "pl", "Perl" },
-            { "sh", "Shell" },
-            { "yaml", "YAML" },
-            { "md", "Markdown" }
-        };
-
         private static async Task Main(string[] args)
         {
             var rootCommand =
@@ -57,7 +28,7 @@ namespace codecountercli
                 counter.Query = fileTypes;
 
                 string[] files = counter.GetFiles(folder);
-                counter.LinesPerFileTable(files).Write();
+                counter.LinesPerFileTable(files, folder).Write();
                 counter.SummaryTable(files).Write();
 
             }, filetypesOption, folderOption);

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ConsoleTables;
+using Microsoft.VisualBasic.FileIO;
 
 namespace codecountercli
 {
@@ -34,13 +36,20 @@ namespace codecountercli
             { "pl", "Perl" },
             { "sh", "Shell" },
             { "yaml", "YAML" },
-            { "md", "Markdown" }
+            { "md", "Markdown" },
+            { "dll", "DLL"},
+            { "exe", "Executable"},
         };
 
         public string Query =
             ".cs, .java, .cpp, .py, .js, .html, .css, .php, .swift, .rb, .go, .c, .h, .ts, .jsx, .tsx, .vue, .json, .xml, .sql, .pl, .sh, .yaml, .md";
 
         private readonly Dictionary<string, int> lineCountPerType = new();
+        private readonly Dictionary<string, int> lineCountPerFile = new();
+
+        private string dir;
+
+        public string[] QueryToArray() => Query.Replace(" ", "").Split(",");
 
         public ConsoleTable SummaryTable(string[] files)
         {
@@ -50,17 +59,19 @@ namespace codecountercli
 
             int total = lineCountPerType.Values.Sum();
 
-            foreach (var (key, value) in lineCountPerType)
+            foreach (var (key, value) in lineCountPerType.OrderByDescending(x => x.Value))
             {
-                table.AddRow(FileNames.TryGetValue(key, out var name) ? name : key, value, Percentage(value, total));
+                table.AddRow(FileNames.TryGetValue(key, out var name) ? name : key, value, $"{Percentage(value, total)}%".Replace(',', '.'));
             }
 
             return table;
         }
 
-        public ConsoleTable LinesPerFileTable(string[] files)
+        public ConsoleTable LinesPerFileTable(string[] files, string rootDirectory)
         {
             ConsoleTable table = new("File Name", "Lines of Code", "File Type");
+
+            var query = QueryToArray();
 
             table.Options.EnableCount = false;
 
@@ -75,21 +86,30 @@ namespace codecountercli
                 else
                     lineCountPerType.Add(fileType, lineCount);
 
-                table.AddRow(fileName, lineCount, FileNames.TryGetValue(fileType, out var name) ? name : fileType);
+                if (lineCountPerFile.ContainsKey(file))
+                    lineCountPerFile[file] += lineCount;
+                else
+                    lineCountPerFile.Add(file, lineCount);
+
             }
 
+            foreach ((string key, int value) in lineCountPerFile.OrderByDescending(x => x.Value))
+            {   
+                string fileType = Path.GetFileName(key).Split(".").Last();
+                table.AddRow(Path.GetRelativePath(rootDirectory, key), value, FileNames.TryGetValue(fileType, out var name) ? name : fileType);
+            }
             return table;
         }
 
         public string[] GetFiles(string directory)
         {
             List<string> found = new();
-
+            var query = QueryToArray();
             try
             {
                 foreach (string f in Directory.GetFiles(directory))
                 {
-                    if (Query.Any(x => f.EndsWith(x)))
+                    if (query.Any(x => f.EndsWith(x)))
                         found.Add(f);
                 }
                 foreach (string d in Directory.GetDirectories(directory))
@@ -112,14 +132,15 @@ namespace codecountercli
             {
                 using (StreamReader r = new StreamReader(file))
                 {
-                    while (r.ReadLine() is { } line)
+                    while (r.ReadLine() is { } rawline)
                     {
-                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("//") && !line.StartsWith("/*") &&
-                            !line.StartsWith("*") &&
-                            !line.StartsWith("#") && !line.StartsWith("<!--") && !line.EndsWith("-->"))
-                        {
+                        string line = rawline.Trim();
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        //if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("//") && !line.StartsWith("/*") &&
+                        //    !line.StartsWith("*") &&
+                        //    !line.StartsWith("#") && !line.StartsWith("<!--") && !line.EndsWith("-->") && !line.StartsWith("///"))
+                        if (!Regex.Match(line, @"^(///|//|/\*|\*/|-->|<!--|#|\*)").Success)
                             count++;
-                        }
                     }
                 }
             }
