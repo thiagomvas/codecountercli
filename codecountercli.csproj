@@ -8,12 +8,23 @@
 	  <PackAsTool>true</PackAsTool>
       <ToolCommandName>codecounter</ToolCommandName>
         <PackageOutputPath>./nupkg</PackageOutputPath>
-        <Version>1.1.0</Version>
+        <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="languages.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ConsoleTables" Version="2.6.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="system.commandline" Version="2.0.0-beta4.22272.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="languages.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

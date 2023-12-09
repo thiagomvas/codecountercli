@@ -22,7 +22,7 @@ namespace codecountercli
                                getDefaultValue: () => true);
 
             Option<bool> showFileOption = new(name: "--showfileinfo", description: "Show the results for each file",
-                               getDefaultValue: () => true);
+                               getDefaultValue: () => false);
 
             Option<bool> shortFileNamesOption = new(name: "--shortfilenames", description: "Shows only the file name instead of the path to it on the file info table.",
                                               getDefaultValue: () => false);
@@ -40,13 +40,14 @@ namespace codecountercli
             {
                 counter.Query = fileTypes;
 
+                counter.GetAllData(folder);
 
-                string[] files = counter.GetFiles(folder);
-                counter.RunCounter(files);
 
 
                 if(showperfile) counter.LinesPerFileTable(folder, shortfilenames).Write();
-                if(showsummary) counter.SummaryTable(files).Write();
+                if(showsummary) counter.SummaryTable().Write();
+
+                Console.WriteLine($"Total Lines of code: {counter.totalLinesOfCode}");
 
             }, filetypesOption, folderOption, showFileOption, showSummaryOption, shortFileNamesOption);
 

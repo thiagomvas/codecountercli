@@ -1,55 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using ConsoleTables;
-using Microsoft.VisualBasic.FileIO;
+using Newtonsoft.Json;
 
 namespace codecountercli
 {
     internal class CodeCounter
     {
-        public readonly Dictionary<string, string> FileNames = new()
-        {
-            { "cs", "C#" },
-            { "java", "Java" },
-            { "cpp", "C++" },
-            { "py", "Python" },
-            { "js", "JavaScript" },
-            { "html", "HTML" },
-            { "css", "CSS" },
-            { "php", "PHP" },
-            { "swift", "Swift" },
-            { "rb", "Ruby" },
-            { "go", "Go" },
-            { "c", "C" },
-            { "h", "Header" },
-            { "ts", "TypeScript" },
-            { "jsx", "React JSX" },
-            { "tsx", "React TypeScript" },
-            { "vue", "Vue.js" },
-            { "json", "JSON" },
-            { "xml", "XML" },
-            { "sql", "SQL" },
-            { "pl", "Perl" },
-            { "sh", "Shell" },
-            { "yaml", "YAML" },
-            { "md", "Markdown" },
-            { "dll", "DLL"},
-            { "exe", "Executable"},
-        };
 
-        public string Query =
-            ".cs, .java, .cpp, .py, .js, .html, .css, .php, .swift, .rb, .go, .c, .h, .ts, .jsx, .tsx, .vue, .json, .xml, .sql, .pl, .sh, .yaml, .md";
+        public CodeCounter()
+        {
+            string json = File.ReadAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "languages.json"));
+            List<Language> languages = JsonConvert.DeserializeObject<List<Language>>(json);
+
+            foreach (Language lang in languages)
+            {
+                string name = lang.Name;
+                if(lang.Extensions.Length == 0) continue;
+                foreach (string extension in lang.Extensions)
+                {
+                    extensionToName.TryAdd(extension, name);
+                    extensions.Add(extension);
+                }
+            }
+        }
+        Dictionary<string, string> extensionToName = new Dictionary<string, string>();
+        private HashSet<string> extensions = new();
+        public readonly Dictionary<string, string> FileNames = new();
+
+        public int totalLinesOfCode = 0;
+
+        public string Query = string.Empty;
 
         private readonly Dictionary<string, int> lineCountPerType = new();
         private readonly Dictionary<string, int> lineCountPerFile = new();
 
         public string[] QueryToArray() => Query.Replace(" ", "").Split(",");
 
-        public ConsoleTable SummaryTable(string[] files)
+
+        public ConsoleTable SummaryTable()
         {
             ConsoleTable table = new("Language / File Type", "Lines of code", "Percentage of total");
 
@@ -59,27 +48,39 @@ namespace codecountercli
 
             foreach (var (key, value) in lineCountPerType.OrderByDescending(x => x.Value))
             {
-                table.AddRow(FileNames.TryGetValue(key, out var name) ? name : key, value, $"{Percentage(value, total)}%".Replace(',', '.'));
+                table.AddRow(key, value, $"{Percentage(value, total)}%".Replace(',', '.'));
             }
 
             return table;
         }
 
+        public void GetAllData(string folder)
+        {
+            if(string.IsNullOrWhiteSpace(Query)) Console.WriteLine("No query specified, counting all files...");
+            else Console.WriteLine($"Query: {Query}");
+
+            Console.WriteLine("Reading files...");
+            string[] files = GetFiles(folder);
+            Console.WriteLine($"\nFound {files.Length} files...");
+            Console.WriteLine("Counting lines...");
+            RunCounter(files);
+            Console.WriteLine("");
+        }
+
         public void RunCounter(string[] files)
         {
-            var query = QueryToArray();
 
 
             foreach (string file in files)
             {
-                string fileName = Path.GetFileName(file);
-                string fileType = fileName.Split(".").Last();
+                string fileType = Path.GetExtension(file);
+                string key = extensionToName.TryGetValue(fileType, out string name) ? name.Trim() : fileType;
                 int lineCount = CountLines(file);
 
-                if (lineCountPerType.ContainsKey(fileType))
-                    lineCountPerType[fileType] += lineCount;
+                if (lineCountPerType.ContainsKey(key))
+                    lineCountPerType[key] += lineCount;
                 else
-                    lineCountPerType.Add(fileType, lineCount);
+                    lineCountPerType.Add(key, lineCount);
 
                 if (lineCountPerFile.ContainsKey(file))
                     lineCountPerFile[file] += lineCount;
@@ -110,14 +111,22 @@ namespace codecountercli
 
         public string[] GetFiles(string directory)
         {
-            List<string> found = new();
+            bool hasQuery = !string.IsNullOrWhiteSpace(Query);
             var query = QueryToArray();
+            List<string> found = new();
             try
             {
                 foreach (string f in Directory.GetFiles(directory))
                 {
-                    if (query.Any(x => f.EndsWith(x)))
+                    if (hasQuery && query.Any(x => Path.GetExtension(f) == x))
+                    {
                         found.Add(f);
+                    }
+                    else if (!hasQuery && extensions.Any(x => Path.GetExtension(f) == x))
+                    {
+                        found.Add(f);
+                    }
+                    Console.Write($"\rReading File: {Path.GetFileName(f)}");
                 }
                 foreach (string d in Directory.GetDirectories(directory))
                 {
@@ -135,6 +144,7 @@ namespace codecountercli
         public int CountLines(string file)
         {
             int count = 0;
+            Console.Write($"\rCounting lines for {Path.GetFileName(file)}");
             try
             {
                 using (StreamReader r = new StreamReader(file))
@@ -143,9 +153,6 @@ namespace codecountercli
                     {
                         string line = rawline.Trim();
                         if (string.IsNullOrWhiteSpace(line)) continue;
-                        //if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith("//") && !line.StartsWith("/*") &&
-                        //    !line.StartsWith("*") &&
-                        //    !line.StartsWith("#") && !line.StartsWith("<!--") && !line.EndsWith("-->") && !line.StartsWith("///"))
                         if (!Regex.Match(line, @"^(///|//|/\*|\*/|-->|<!--|#|\*)").Success)
                             count++;
                     }
@@ -155,7 +162,7 @@ namespace codecountercli
             {
                 Console.WriteLine($"Error when counting lines in file {file}:\n{e}");
             }
-
+            totalLinesOfCode += count;
             return count;
         }
 
